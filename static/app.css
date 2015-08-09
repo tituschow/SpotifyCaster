@@ -1,0 +1,46 @@
+html {
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+ul#playlist {
+  list-style-type: none;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+}
+
+#playlist li {
+  display: inline-block;
+  vertical-align: top;
+  width: 8em;
+  height: 10em;
+  padding: 2.5px;
+  margin: 2.5px;
+}
+
+#playlist img {
+  width: 7em;
+  height: auto;
+}
+
+#playlist p {
+  padding: 0;
+  margin: 2px 4px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#playlist a {
+  text-decoration: none;
+}
+
+#playlist .title {
+  color: #333;
+}
+
+#playlist .album {
+  color: #aaa;
+  font-size: 50%;
+}

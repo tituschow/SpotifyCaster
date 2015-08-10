@@ -55,7 +55,7 @@ function initializeCastApi() {
   var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
     sessionListener,
     receiverListener,
-    autoJoinPolicyArray[2]);
+    autoJoinPolicyArray[1]);
 
   chrome.cast.initialize(apiConfig, onInitSuccess, onError);
 }
@@ -170,7 +170,7 @@ function queueTrack(track) {
 
   var item = new chrome.cast.media.QueueItem(mediaInfo);
   item.autoplay = true;
-  item.preloadTime = 0;
+  item.preloadTime = 15;
   item.startTime = 0;
 
   currentMediaSession.queueAppendItem(item);

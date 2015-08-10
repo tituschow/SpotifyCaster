@@ -31,6 +31,36 @@ onMediaDiscovery(function() {
   updateStatus();
 });
 
+function play(id) {
+  var track = tracks[id];
+  if (!currentMediaSession || currentMediaSession.items) {
+    loadTrack(track);
+  } else {
+    var item = $.grep(currentMediaSession.items, function(element) {
+      return element.itemId == currentMediaSession.currentItemId;
+    })[0];
+
+    var next_index = currentMediaSession.items.indexOf(item) + 1;
+    if (next_index >= currentMediaSession.items.length) {
+      next_index = null;
+    }
+
+    var mediaInfo = getTrackInfo(track);
+
+    var item = new chrome.cast.media.QueueItem(mediaInfo);
+    item.autoplay = true;
+    item.preloadTime = 15;
+    item.startTime = 0;
+
+    var request = new chrome.cast.media.QueueInsertItemsRequest([item]);
+    request.insertBefore = next_index;
+
+    currentMediaSession.queueInsertItems(request, function() {
+      currentMediaSession.queueNext();
+    });
+  }
+}
+
 function updateStatus() {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
     $('#playpause').removeClass('fa-play').addClass('fa-pause');
@@ -114,12 +144,6 @@ function addTrackElement(track) {
   )));
 }
 
-function playTrack(id) {
-  track = tracks[id];
-
-  loadTrack(track);
-}
-
 $.getJSON('/playlist/iliekpie/5rZsjxKt6W8Sw9j7DXH9bH', function(data) {
   for (var i = 0; i < data.count; i++) {
     addTrackElement(data.tracks[i]);
@@ -129,11 +153,11 @@ $.getJSON('/playlist/iliekpie/5rZsjxKt6W8Sw9j7DXH9bH', function(data) {
 playlist.on('click', 'a', function(e) {
   e.preventDefault();
 
-  source = $(this).attr('href').split('#')[1];
+  var id = $(this).attr('href').split('#')[1];
 
-  console.log('Playing: ' + source)
+  console.log('Playing: ' + id)
 
-  playTrack(source);
+  play(id);
 });
 
 $('#playpause').click(function(e) {

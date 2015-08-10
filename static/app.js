@@ -1,12 +1,5 @@
-var PlayerState = Object.freeze({
-  UNLOADED: 'Unloaded',
-  PLAYING: 'Playing',
-  PAUSED: 'Paused',
-  STOPPED: 'Stopped'
-});
-
 var playlist = $('#playlist'),
-    state = PlayerState.UNLOADED,
+    song_id = -1,
     tracks = {};
 
 Storage.prototype.setObj = function(key, obj) {
@@ -17,17 +10,29 @@ Storage.prototype.getObj = function(key) {
     return JSON.parse(this.getItem(key))
 }
 
-onMediaDiscovery(function(isAlive) {
+onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING &&
+      currentMediaSession.currentItemId != song_id &&
       currentMediaSession.currentTime > 1 &&
       currentMediaSession.currentTime < 3) {
-    console.log('Detected oddly started song! Restarting.');
-    setMediaVolume(null, true);
-    seek(function() { setMediaVolume(null, false) })(0, true);
+    console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
+    setMuted(true);
+    seek(function() { setMuted(false) })(0, true);
   }
-  console.log(isAlive);
-  console.log(currentMediaSession);
+  song_id = currentMediaSession.currentItemId;
 });
+
+onMediaDiscovery(function() {
+
+});
+
+function updateStatus() {
+  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
+    $('#playpause').removeClass('fa-pause').addClass('fa-play');
+  } else if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PAUSED) {
+    $('#playpause').removeClass('fa-play').addClass('fa-pause');
+  }
+}
 
 function shuffleArray(array) {
   var currentIndex = array.length, temporaryValue, randomIndex;
@@ -84,27 +89,6 @@ function addTrackElement(track) {
       $('<p>').attr('class', 'title').append(track.name)).append(
       $('<p>').attr('class', 'album').append(track.album)
   )));
-}
-
-function togglePlaying(override) {
-  if (arguments.length > 0) {
-    state = (override) ? PlayerState.PAUSED : PlayerState.PLAYING;
-  }
-
-  if (state == PlayerState.PLAYING) {
-    $('#playpause').removeClass('fa-pause').addClass('fa-play');
-    state = PlayerState.PAUSED;
-    shouldPlayNext = false;
-    if (currentMediaSession != null) {
-      currentMediaSession.pause();
-    }
-  } else if (state == PlayerState.PAUSED) {
-    $('#playpause').removeClass('fa-play').addClass('fa-pause');
-    state = PlayerState.PLAYING;
-    if (currentMediaSession != null) {
-      currentMediaSession.play();
-    }
-  }
 }
 
 function playTrack(id) {

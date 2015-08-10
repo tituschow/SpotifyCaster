@@ -19,10 +19,8 @@ var MEDIA_ROOT = 'http://192.168.1.43:5000';
 
 var timer = null;
 
-var onMediaDiscoveredCallback = function(isAlive) {
-  console.log('Callback not set');
-  console.log(isAlive);
-}
+var mediaUpdateCallback = function(isAlive) { console.log('mediaUpdateCallback not set.') };
+var mediaDiscoveryCallback = function() { console.log('mediaDiscoveryCallback not set.') };
 
 /**
  * Call initialization
@@ -172,7 +170,7 @@ function queueTrack(track) {
 
   var item = new chrome.cast.media.QueueItem(mediaInfo);
   item.autoplay = true;
-  item.preloadTime = 20;
+  item.preloadTime = 0;
   item.startTime = 0;
 
   currentMediaSession.queueAppendItem(item);
@@ -211,7 +209,8 @@ function addTrack(track) {
  */
 function onMediaDiscovered(how, mediaSession) {
   currentMediaSession = mediaSession;
-  currentMediaSession.addUpdateListener(onMediaDiscoveredCallback);
+  mediaDiscoveryCallback();
+  currentMediaSession.addUpdateListener(mediaUpdateCallback);
 }
 
 /**
@@ -221,6 +220,9 @@ function onMediaDiscovered(how, mediaSession) {
 function onMediaError(e) {
   console.log('media error');
   console.log(e);
+  if (currentMediaSession.items) {
+    currentMediaSession.queueNext();
+  }
 }
 
 /**
@@ -246,6 +248,20 @@ function setMuted(muted) {
   session.setReceiverMuted(muted);
 }
 
+function setMediaVolume(level, muted) {
+  var volume = new chrome.cast.Volume();
+  if (arguments[0]) {
+    volume.level = level / 100;
+  }
+  if (arguments[1]) {
+    volume.muted = muted;
+  }
+
+  var request = new chrome.cast.media.VolumeRequest(volume);
+
+  currentMediaSession.setVolume(request);
+}
+
 function seek(onSuccess) {
   return function(time, play) {
     var request = new chrome.cast.media.SeekRequest();
@@ -258,6 +274,10 @@ function seek(onSuccess) {
   };
 }
 
+function onMediaUpdate(callback) {
+  mediaUpdateCallback = callback;
+}
+
 function onMediaDiscovery(callback) {
-  onMediaDiscoveredCallback = callback;
+  mediaDiscoveryCallback = callback;
 }

@@ -54,11 +54,11 @@ a:hover {
   color: #666;
 }
 
-#playlist .title {
+.title {
   color: #333;
 }
 
-#playlist .album {
+.album {
   color: #aaa;
   font-size: 60%;
 }
@@ -78,4 +78,37 @@ footer {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+#now-playing, #next-up {
+  position: absolute;
+  bottom: 0;
+  margin: 0 6px;
+  max-width: 35%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#now-playing h3, #next-up h3 {
+  padding: 0;
+  margin: 0;
+}
+
+#now-playing {
+  left: 0;
+}
+
+#next-up {
+  right: 0;
+  text-align: right;
+}
+
+footer .title, footer .album {
+  margin: 6px 0;
+}
+
+footer .cover {
+  height: 4em;
+  width: auto;
 }

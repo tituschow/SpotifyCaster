@@ -78,12 +78,14 @@ function updateStatus() {
     var next_index = currentMediaSession.items.indexOf(item) + 1;
     if (next_index < currentMediaSession.items.length) {
       var next = currentMediaSession.items[next_index].media.metadata;
-      $('#next-up').text('Next: ' + next.title + ' - ' + next.albumName);
+      $('#next-up .title').text(next.title);
+      $('#next-up .album').text(next.albumName);
     }
   } else if (currentMediaSession.media) {
     media = currentMediaSession.media.metadata;
   }
-  $('#now-playing').text('Now playing: ' + media.title + ' - ' + media.albumName);
+  $('#now-playing .title').text(media.title);
+  $('#now-playing .album').text(media.albumName);
   $('#volume').val(session.receiver.volume.level * 100);
 }
 

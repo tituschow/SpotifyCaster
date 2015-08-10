@@ -47,6 +47,11 @@ ul#playlist {
 
 a {
   text-decoration: none;
+  color: #333;
+}
+
+a:hover {
+  color: #666;
 }
 
 #playlist .title {

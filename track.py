@@ -80,11 +80,12 @@ class Track(object):
     def stream(self, start, end=None, count=0):
         TrackData = namedtuple('TrackData', 'data size')
 
-        if count > 5:
+        if count > 10:
             self.logger.info('Requested {}-{}, but total size is {}'.format(start, end, self._get_size()))
             self.logger.warning('Exceeded max wait: returning empty')
             return TrackData('', 0)
         if start >= self._get_size():
+            print self._get_size();
             time.sleep(1);
             return self.stream(start, end, count + 1)
 

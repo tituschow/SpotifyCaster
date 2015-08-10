@@ -12,26 +12,42 @@ Storage.prototype.getObj = function(key) {
 
 onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING &&
-      currentMediaSession.currentItemId != song_id &&
-      currentMediaSession.currentTime > 1 &&
-      currentMediaSession.currentTime < 3) {
-    console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
-    setMuted(true);
-    seek(function() { setMuted(false) })(0, true);
+      currentMediaSession.currentItemId != song_id) {
+    if (currentMediaSession.currentTime > 1 &&
+        currentMediaSession.currentTime < 3) {
+      console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
+      setMuted(true);
+      seek(function() { setMuted(false) })(0, true);
+    }
+
+    console.log('Song started @ ' + currentMediaSession.currentTime);
   }
+  updateStatus();
   song_id = currentMediaSession.currentItemId;
 });
 
 onMediaDiscovery(function() {
-
+  console.log('media discovered');
+  updateStatus();
 });
 
 function updateStatus() {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
-    $('#playpause').removeClass('fa-pause').addClass('fa-play');
-  } else if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PAUSED) {
     $('#playpause').removeClass('fa-play').addClass('fa-pause');
+  } else if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PAUSED) {
+    $('#playpause').removeClass('fa-pause').addClass('fa-play');
   }
+
+  var media;
+  if (currentMediaSession.items) {
+    var item = $.grep(currentMediaSession.items, function(element) {
+      return element.itemId == currentMediaSession.currentItemId;
+    })[0];
+    media = item.media.metadata;
+  } else {
+    media = currentMediaSession.media.metadata;
+  }
+  $('#now-playing').text('Now playing: ' + media.title + ' - ' + media.albumName);
 }
 
 function shuffleArray(array) {
@@ -94,8 +110,6 @@ function addTrackElement(track) {
 function playTrack(id) {
   track = tracks[id];
 
-  togglePlaying(true);
-
   loadTrack(track);
 }
 
@@ -118,7 +132,15 @@ playlist.on('click', 'a', function(e) {
 $('#playpause').click(function(e) {
   e.preventDefault();
 
-  togglePlaying();
+  if (currentMediaSession) {
+    if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
+      currentMediaSession.pause();
+    } else {
+      currentMediaSession.play();
+    }
+  } else {
+    loadTrack(tracks[Object.keys(tracks)[0]]);
+  }
 });
 
 $('#next').click(function(e) {

@@ -12,18 +12,18 @@ Storage.prototype.getObj = function(key) {
 
 onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING &&
-      currentMediaSession.currentItemId != song_id) {
-    if (currentMediaSession.currentTime > 1 &&
-        currentMediaSession.currentTime < 3) {
-      console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
-      setMuted(true);
-      seek(function() { setMuted(false) })(0, true);
-    }
-
-    console.log('Song started @ ' + currentMediaSession.currentTime);
+      currentMediaSession.currentItemId != song_id &&
+      currentMediaSession.currentTime > 1 &&
+      currentMediaSession.currentTime < 3) {
+    console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
+    setMuted(true);
+    seek(function() { setMuted(false) })(0, true);
   }
+  console.log('Media ' + currentMediaSession.playerState + ' @ ' + currentMediaSession.currentTime);
   updateStatus();
-  song_id = currentMediaSession.currentItemId;
+  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
+    song_id = currentMediaSession.currentItemId;
+  }
 });
 
 onMediaDiscovery(function() {
@@ -38,16 +38,23 @@ function updateStatus() {
     $('#playpause').removeClass('fa-pause').addClass('fa-play');
   }
 
-  var media;
+  var media = {title: 'Start a song!', albumName: ''};
   if (currentMediaSession.items) {
     var item = $.grep(currentMediaSession.items, function(element) {
       return element.itemId == currentMediaSession.currentItemId;
     })[0];
     media = item.media.metadata;
-  } else {
+
+    var next_index = currentMediaSession.items.indexOf(item) + 1;
+    if (next_index < currentMediaSession.items.length) {
+      var next = currentMediaSession.items[next_index].media.metadata;
+      $('#next-up').text('Next: ' + next.title + ' - ' + next.albumName);
+    }
+  } else if (currentMediaSession.media) {
     media = currentMediaSession.media.metadata;
   }
   $('#now-playing').text('Now playing: ' + media.title + ' - ' + media.albumName);
+  $('#volume').val(session.receiver.volume.level * 100);
 }
 
 function shuffleArray(array) {

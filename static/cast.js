@@ -55,7 +55,7 @@ function initializeCastApi() {
   var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
     sessionListener,
     receiverListener,
-    autoJoinPolicyArray[1]);
+    autoJoinPolicyArray[2]);
 
   chrome.cast.initialize(apiConfig, onInitSuccess, onError);
 }

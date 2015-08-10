@@ -1,12 +1,20 @@
 <html>
     <head>
       <link rel="stylesheet" type="text/css" href="static/app.css">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
     </head>
     <body>
         <div>
           <ul id="playlist"></ul>
-          <a href="#control">Play/Pause</a>
         </div>
+        <footer>
+          <div id="controls">
+            <a id="playpause" class="fa fa-play" href="#"></a>
+            <a id="next" href="#">Next</a>
+            <div id="now-playing"></div>
+            <input type="range" min="0" max="100" value="50" step="1" id="volume">
+          </div>
+        </footer>
         <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
         <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.0.min.js"></script>
         <script type="text/javascript" src="static/cast.js"></script>

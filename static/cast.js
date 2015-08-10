@@ -19,6 +19,11 @@ var MEDIA_ROOT = 'http://192.168.1.43:5000';
 
 var timer = null;
 
+var onMediaDiscoveredCallback = function(isAlive) {
+  console.log('Callback not set');
+  console.log(isAlive);
+}
+
 /**
  * Call initialization
  */
@@ -147,37 +152,55 @@ function onLaunchError() {
   console.log('launch error');
 }
 
-/**
- * load media
- * @param {string} mediaURL media URL string
- * @this loadMedia
- */
-function playTrack(track) {
+function getTrackInfo(track) {
+  var mediaInfo = new chrome.cast.media.MediaInfo(MEDIA_ROOT + '/track/' + track.id + '.mp3');
+
+  mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+  mediaInfo.metadata.metadataType = chrome.cast.media.MetadataType.GENERIC;
+  mediaInfo.contentType = 'audio/mpeg';
+
+  mediaInfo.metadata.title = track.name;
+  mediaInfo.metadata.albumName = track.album;
+  mediaInfo.metadata.artist = track.artist;
+  mediaInfo.metadata.images = [{'url': MEDIA_ROOT + '/track/' + track.id + '/cover'}];
+
+  return mediaInfo;
+}
+
+function queueTrack(track) {
+  var mediaInfo = getTrackInfo(track);
+
+  var item = new chrome.cast.media.QueueItem(mediaInfo);
+  item.autoplay = true;
+  item.preloadTime = 20;
+  item.startTime = 0;
+
+  currentMediaSession.queueAppendItem(item);
+}
+
+function loadTrack(track) {
   if (!session) {
     console.log('no session');
         return;
   }
 
-  $.getJSON(MEDIA_ROOT + '/track/' + track + '/metadata', function(metadata) {
-    var mediaInfo = new chrome.cast.media.MediaInfo(MEDIA_ROOT + '/track/' + track + '.mp3');
+  var mediaInfo = getTrackInfo(track);
 
-    mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-    mediaInfo.metadata.metadataType = chrome.cast.media.MetadataType.GENERIC;
-    mediaInfo.contentType = 'audio/mpeg';
+  var request = new chrome.cast.media.LoadRequest(mediaInfo);
+  request.autoplay = true;
+  request.currentTime = 0;
 
-    mediaInfo.metadata.title = metadata.name;
-    mediaInfo.metadata.albumName = metadata.album;
-    mediaInfo.metadata.artist = metadata.artist;
-    mediaInfo.metadata.images = [{'url': MEDIA_ROOT + '/track/' + track + '/cover'}];
+  session.loadMedia(request,
+    onMediaDiscovered.bind(this, 'loadMedia'),
+    onMediaError);
+}
 
-    var request = new chrome.cast.media.LoadRequest(mediaInfo);
-    request.autoplay = true;
-    request.currentTime = 0;
-
-    session.loadMedia(request,
-      onMediaDiscovered.bind(this, 'loadMedia'),
-      onMediaError);
-  });
+function addTrack(track) {
+  if (!currentMediaSession) {
+    loadTrack(track);
+  } else {
+    queueTrack(track);
+  }
 }
 
 /**
@@ -188,6 +211,7 @@ function playTrack(track) {
  */
 function onMediaDiscovered(how, mediaSession) {
   currentMediaSession = mediaSession;
+  currentMediaSession.addUpdateListener(onMediaDiscoveredCallback);
 }
 
 /**
@@ -196,6 +220,7 @@ function onMediaDiscovered(how, mediaSession) {
  */
 function onMediaError(e) {
   console.log('media error');
+  console.log(e);
 }
 
 /**
@@ -211,4 +236,28 @@ function getMediaStatus() {
   currentMediaSession.getStatus(null,
       mediaCommandSuccessCallback.bind(this, 'got media status'),
       onError);
+}
+
+function setVolume(level) {
+  session.setReceiverVolumeLevel(level / 100);
+}
+
+function setMuted(muted) {
+  session.setReceiverMuted(muted);
+}
+
+function seek(onSuccess) {
+  return function(time, play) {
+    var request = new chrome.cast.media.SeekRequest();
+    request.currentTime = time;
+    if (arguments.length > 1) {
+      request.resumeState = (play) ? chrome.cast.media.ResumeState.PLAYBACK_START : chrome.cast.media.ResumeState.PLAYBACK_STOP;
+    }
+
+    currentMediaSession.seek(request, onSuccess);
+  };
+}
+
+function onMediaDiscovery(callback) {
+  onMediaDiscoveredCallback = callback;
 }

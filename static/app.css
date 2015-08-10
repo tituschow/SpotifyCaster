@@ -1,10 +1,12 @@
-html {
+html, body {
   font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  padding: 0;
+  margin: 0;
 }
 
 ul#playlist {
   list-style-type: none;
-  margin: 0 auto;
+  margin: 0.5em auto 5.5em;
   padding: 0;
   text-align: center;
 }
@@ -16,11 +18,22 @@ ul#playlist {
   height: 10em;
   padding: 2.5px;
   margin: 2.5px;
+  border-radius: 3px;
+  box-shadow: 0px 0px 3px 1px #a1a1a1;
+}
+
+#playlist li:hover {
+  box-shadow: 0px 0px 8px 1px #a1a1a1;
+}
+
+#playlist li:active {
+  box-shadow: 0px 0px 3px 1px #a1a1a1 inset;
 }
 
 #playlist img {
   width: 7em;
   height: auto;
+  margin: 5px;
 }
 
 #playlist p {
@@ -32,7 +45,7 @@ ul#playlist {
   text-overflow: ellipsis;
 }
 
-#playlist a {
+a {
   text-decoration: none;
 }
 
@@ -42,5 +55,22 @@ ul#playlist {
 
 #playlist .album {
   color: #aaa;
-  font-size: 50%;
+  font-size: 60%;
+}
+
+footer {
+  position: fixed;
+  background-color: white;
+  width: 100%;
+  bottom: 0;
+  min-height: 5em;
+  box-shadow: 0px 0px 8px 1px #a1a1a1;
+}
+
+#controls {
+  display: inline-block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }

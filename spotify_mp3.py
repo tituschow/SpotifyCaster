@@ -22,8 +22,9 @@ class SpotifyMP3(object):
         self.logged_in = threading.Event()
         self.logged_out = threading.Event()
         self.logged_out.set()
+        self.stopped = threading.Event()
         self.current_track = None
-        self.current_tracks = {}
+        self.tracks = {}
 
         self.session = spotify.Session()
         self.session.on(
@@ -86,7 +87,7 @@ class SpotifyMP3(object):
             self._pipe = None
 
     def get_track(self, uri):
-        track = self.current_tracks.get(uri, None)
+        track = self.tracks.get(uri, None)
         if track:
             return track
 
@@ -94,11 +95,10 @@ class SpotifyMP3(object):
             spotify_track = self.session.get_track(uri)
             spotify_track.load()
         except (ValueError, spotify.Error) as e:
-            self.logger.warning(e)
-            return
+            self.logger.exception(e)
 
         track = Track(spotify_track, self.bitrate)
-        self.current_tracks[uri] = track
+        self.tracks[uri] = track
         return track
 
     def download(self, uri):
@@ -111,10 +111,10 @@ class SpotifyMP3(object):
             self.logger.info('Stopping {}'.format(self.current_track.name))
             self.current_track.stop()
             self.session.player.unload()
+            self.stopped.set()
         self.current_track = track
 
         if self.current_track.state == Track.DOWNLOADING or self.current_track.state == Track.DOWNLOADED:
-            self.logger.info('{} already initialized!'.format(self.current_track.name))
             return self.current_track
 
         self.logger.info('Loading {} into player'.format(self.current_track.name))

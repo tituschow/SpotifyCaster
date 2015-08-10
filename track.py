@@ -20,7 +20,7 @@ class Track(object):
         self.track = track
         self.bitrate = bitrate
 
-        self.name = track.name
+        self.name = track.name.encode('utf-8')
         self.album = track.album
         self.artists = track.artists
 
@@ -77,10 +77,16 @@ class Track(object):
         else:
             return length
 
-    def stream(self, start, end=None):
+    def stream(self, start, end=None, count=0):
+        TrackData = namedtuple('TrackData', 'data size')
+
+        if count > 5:
+            self.logger.info('Requested {}-{}, but total size is {}'.format(start, end, self._get_size()))
+            self.logger.warning('Exceeded max wait: returning empty')
+            return TrackData('', 0)
         if start >= self._get_size():
-            time.sleep(1)
-            return self.stream(start, end)
+            time.sleep(1);
+            return self.stream(start, end, count + 1)
 
         length = self._get_chunk_size(start, end)
         self.logger.info('Requested {}-{} - total size {}'.format(start, end, self._get_size()))
@@ -92,7 +98,6 @@ class Track(object):
             f.seek(start)
             data = f.read(length)
 
-        TrackData = namedtuple('TrackData', 'data size')
         return TrackData(data, length)
 
     def update(self, bytes):

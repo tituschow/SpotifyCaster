@@ -1,24 +1,32 @@
 var playlist = $('#playlist'),
     song_id = -1,
-    tracks = {};
+    tracks = {},
+    queueProcessed = true,
+    queue = [];
 
 Storage.prototype.setObj = function(key, obj) {
-    return this.setItem(key, JSON.stringify(obj))
+  return this.setItem(key, JSON.stringify(obj))
 }
 
 Storage.prototype.getObj = function(key) {
-    return JSON.parse(this.getItem(key))
+  return JSON.parse(this.getItem(key))
 }
 
 onMediaUpdate(function(isAlive) {
-  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING &&
-      currentMediaSession.currentItemId != song_id &&
-      currentMediaSession.currentTime > 1 &&
-      currentMediaSession.currentTime < 3) {
-    console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
-    setMuted(true);
-    seek(function() { setMuted(false) })(0, true);
+  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
+    if (currentMediaSession.currentItemId != song_id &&
+        currentMediaSession.currentTime > 1 &&
+        currentMediaSession.currentTime < 4) {
+      console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
+      setMediaVolume(null, true);
+      seek(function() { setMediaVolume(null, false) })(0, true);
+    } else if (!queueProcessed && queue.length > 0) {
+      queueProcessed = true;
+      console.log(queue);
+      queueAll(queue);
+    }
   }
+
   console.log('Media ' + currentMediaSession.playerState + ' @ ' + currentMediaSession.currentTime);
   updateStatus();
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
@@ -31,34 +39,47 @@ onMediaDiscovery(function() {
   updateStatus();
 });
 
+function dumpQueue() {
+  console.log($.map(currentMediaSession.items, function(element) {
+    return element.media.metadata.title;
+  }));
+}
+
+function getItem(media, id) {
+  var item = $.grep(currentMediaSession.items, function(element) {
+    if (arguments.length > 1) {
+      return element.itemId == id
+    } else {
+      return element.media.contentId == media.contentId;
+    }
+  })[0];
+
+  console.log(currentMediaSession.items.indexOf(item));
+
+  return item;
+}
+
+function extractQueue() {
+  var queueItems = $.map(currentMediaSession.items, function(item) {
+    return tracks[item.media.metadata.customData.id];
+  });
+
+  return queueItems;
+}
+
 function play(id) {
   var track = tracks[id];
-  if (!currentMediaSession || currentMediaSession.items) {
-    loadTrack(track);
-  } else {
-    var item = $.grep(currentMediaSession.items, function(element) {
-      return element.itemId == currentMediaSession.currentItemId;
-    })[0];
 
-    var next_index = currentMediaSession.items.indexOf(item) + 1;
-    if (next_index >= currentMediaSession.items.length) {
-      next_index = null;
-    }
+  if (currentMediaSession.items) {
+    var currentItem = getItem(null, currentMediaSession.currentItemId);
+    var queueItems = extractQueue();
+    var start = Math.min(currentMediaSession.items.indexOf(currentItem) + 1, currentMediaSession.items.length);
 
-    var mediaInfo = getTrackInfo(track);
-
-    var item = new chrome.cast.media.QueueItem(mediaInfo);
-    item.autoplay = true;
-    item.preloadTime = 15;
-    item.startTime = 0;
-
-    var request = new chrome.cast.media.QueueInsertItemsRequest([item]);
-    request.insertBefore = next_index;
-
-    currentMediaSession.queueInsertItems(request, function() {
-      currentMediaSession.queueNext();
-    });
+    var played = queueItems.splice(0, start);
+    queue = queueItems.concat(played);
+    queueProcessed = false;
   }
+  loadTrack(track);
 }
 
 function updateStatus() {
@@ -80,6 +101,9 @@ function updateStatus() {
       var next = currentMediaSession.items[next_index].media.metadata;
       $('#next-up .title').text(next.title);
       $('#next-up .album').text(next.albumName);
+    } else {
+      $('#next-up .title').text('');
+      $('#next-up .album').text('');
     }
   } else if (currentMediaSession.media) {
     media = currentMediaSession.media.metadata;
@@ -108,27 +132,33 @@ function shuffleArray(array) {
   return array;
 }
 
-function shuffle() {
-  if (currentMediaSession && currentMediaSession.items) {
-    var queue = currentMediaSession.items.slice(0)
-    shuffleArray(queue);
-    currentMediaSession.queueReorderItems(queue);
+function shuffle(forced) {
+  if (currentMediaSession && currentMediaSession.items && !forced) {
+    var current_queue = $.map(currentMediaSession.items, function(element) {
+      return element.itemId
+    });
+    shuffleArray(current_queue);
+
+    var request = new chrome.cast.media.QueueReorderItemsRequest(current_queue);
+    currentMediaSession.queueReorderItems(request);
   } else {
-    var queue = $.map(tracks, function(track) { return track });
-    shuffleArray(queue);
-    queueAll(queue);
+    var current_queue = $.map(tracks, function(track) { return track });
+    shuffleArray(current_queue);
+    queueAll(current_queue);
   }
 }
 
-function queueAll(tracks) {
+function queueAll(trackList) {
+  var queueOffset = 60;
   var initialized = false;
   var queueNext = function() {
     if (!initialized || (currentMediaSession && currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING)) {
       initialized = true;
-      addTrack(tracks.pop());
+      addTrack(trackList.shift());
     }
 
-    if (tracks.length > 0) {
+    if (trackList.length > 0 &&
+        (!currentMediaSession || (currentMediaSession.items && currentMediaSession.items.length < (MAX_QUEUE_LENGTH - queueOffset)))) {
       setTimeout(queueNext, 500);
     }
   }
@@ -172,7 +202,7 @@ $('#playpause').click(function(e) {
       currentMediaSession.play();
     }
   } else {
-    loadTrack(tracks[Object.keys(tracks)[0]]);
+    shuffle();
   }
 });
 
@@ -185,11 +215,3 @@ $('#next').click(function(e) {
 $('#volume').change(function(level) {
   setVolume($(this).val());
 });
-
-// $(document).ready(function() {
-//   queue = localStorage.getObj('queue') || [];
-
-//   $(window).bind("beforeunload", function() {
-//     localStorage.setObj('queue', queue);
-//   });
-// });

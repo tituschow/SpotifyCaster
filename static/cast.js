@@ -10,6 +10,7 @@ var PROGRESS_BAR_UPDATE_DELAY = 1000;
  * Session idle time out in miliseconds
  **/
 var SESSION_IDLE_TIMEOUT = 300000;
+var MAX_QUEUE_LENGTH = 160;
 /**
  * global variables
  */
@@ -55,7 +56,7 @@ function initializeCastApi() {
   var apiConfig = new chrome.cast.ApiConfig(sessionRequest,
     sessionListener,
     receiverListener,
-    autoJoinPolicyArray[1]);
+    autoJoinPolicyArray[2]);
 
   chrome.cast.initialize(apiConfig, onInitSuccess, onError);
 }
@@ -162,6 +163,9 @@ function getTrackInfo(track) {
   mediaInfo.metadata.artist = track.artist;
   mediaInfo.metadata.images = [{'url': MEDIA_ROOT + '/track/' + track.id + '/cover'}];
 
+  mediaInfo.metadata.customData = {};
+  mediaInfo.metadata.customData.id = track.id;
+
   return mediaInfo;
 }
 
@@ -220,7 +224,7 @@ function onMediaDiscovered(how, mediaSession) {
 function onMediaError(e) {
   console.log('media error');
   console.log(e);
-  if (currentMediaSession.items) {
+  if (currentMediaSession && currentMediaSession.items) {
     currentMediaSession.queueNext();
   }
 }
@@ -253,7 +257,7 @@ function setMediaVolume(level, muted) {
   if (arguments[0]) {
     volume.level = level / 100;
   }
-  if (arguments[1]) {
+  if (arguments.length > 1) {
     volume.muted = muted;
   }
 

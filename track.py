@@ -6,14 +6,18 @@ from hashlib import md5
 from collections import namedtuple
 
 
+class TrackTimeoutException(Exception):
+    pass
+
+
 class Track(object):
     CACHE_DIR = 'cache'
     MIN_CHUNK_SIZE = 2048
 
-    UNLOADED = 0
-    DOWNLOADING = 1
-    DOWNLOADED = 2
-    STOPPED = 3
+    UNLOADED = 'UNLOADED'
+    DOWNLOADING = 'DOWNLOADING'
+    DOWNLOADED = 'DOWNLOADED'
+    STOPPED = 'STOPPED'
 
     def __init__(self, track, bitrate):
         self.state = Track.UNLOADED
@@ -80,16 +84,16 @@ class Track(object):
     def stream(self, start, end=None, count=0):
         TrackData = namedtuple('TrackData', 'data size')
 
-        if count > 5:
+        if count > 3:
             self.logger.info('Requested {}-{}, but total size is {}'.format(start, end, self._get_size()))
-            self.logger.warning('Exceeded max wait: returning empty')
-            return TrackData('', 0)
+            self.logger.warning('Exceeded max wait: raising error')
+            raise TrackTimeoutException('Exceeded max wait')
         if start >= self._get_size():
             time.sleep(3);
             return self.stream(start, end, count + 1)
 
         length = self._get_chunk_size(start, end)
-        self.logger.info('Requested {}-{} - total size {}'.format(start, end, self._get_size()))
+        self.logger.info('Requested {}-{} - sent {}/{} [{}]'.format(start, end, length, self._get_size(), self.state))
 
         path = self.get_path()
 

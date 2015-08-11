@@ -14,6 +14,7 @@ from flask import Flask, render_template, Response, request, jsonify, send_file
 app = Flask(__name__)
 
 from spotify_mp3 import SpotifyMP3
+from track import TrackTimeoutException
 spotify = SpotifyMP3(160)
 
 @app.route('/')
@@ -39,7 +40,12 @@ def track_stream(id):
     else:
         end = None
 
-    data, length = track.stream(start, end)
+    try:
+        data, length = track.stream(start, end)
+    except TrackTimeoutException:
+        data = b'\x00'
+        length = 1
+
     resp = Response(data, 206, mimetype='audio/mpeg', direct_passthrough=True)
     resp.headers.add('Content-Range', 'bytes {0}-{1}/{2}'.format(start, start + length - 1, track.get_size()))
 

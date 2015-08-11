@@ -88,7 +88,7 @@ class Track(object):
             self.logger.info('Requested {}-{}, but total size is {}'.format(start, end, self._get_size()))
             self.logger.warning('Exceeded max wait: raising error')
             raise TrackTimeoutException('Exceeded max wait')
-        if start >= self._get_size():
+        if start >= self._get_size() or self.state == Track.UNLOADED:
             time.sleep(3);
             return self.stream(start, end, count + 1)
 

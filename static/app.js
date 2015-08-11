@@ -1,16 +1,8 @@
 var playlist = $('#playlist'),
     song_id = -1,
     tracks = {},
-    queueProcessed = true,
+    queueTimer,
     queue = [];
-
-Storage.prototype.setObj = function(key, obj) {
-  return this.setItem(key, JSON.stringify(obj))
-}
-
-Storage.prototype.getObj = function(key) {
-  return JSON.parse(this.getItem(key))
-}
 
 onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
@@ -20,10 +12,11 @@ onMediaUpdate(function(isAlive) {
       console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
       setMediaVolume(null, true);
       seek(function() { setMediaVolume(null, false) })(0, true);
-    } else if (!queueProcessed && queue.length > 0) {
-      queueProcessed = true;
+    } else if (queue.length > 0) {
       console.log(queue);
+      clearTimeout(queueTimer);
       queueAll(queue);
+      queue = [];
     }
   }
 
@@ -151,15 +144,15 @@ function shuffle(forced) {
 function queueAll(trackList) {
   var queueOffset = 60;
   var initialized = false;
+  var left = trackList.slice(0)
   var queueNext = function() {
     if (!initialized || (currentMediaSession && currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING)) {
       initialized = true;
-      addTrack(trackList.shift());
+      addTrack(left.shift());
     }
 
-    if (trackList.length > 0 &&
-        (!currentMediaSession || (currentMediaSession.items && currentMediaSession.items.length < (MAX_QUEUE_LENGTH - queueOffset)))) {
-      setTimeout(queueNext, 500);
+    if (left.length > 0) {
+      queueTimer = setTimeout(queueNext, 500);
     }
   }
 

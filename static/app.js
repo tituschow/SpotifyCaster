@@ -158,7 +158,7 @@ function queueAll(trackList) {
     }
 
     if (left.length > 0) {
-      queueTimer = setTimeout(queueNext, 500);
+      queueTimer = setTimeout(queueNext, 250);
     }
   }
 
@@ -227,6 +227,7 @@ var suggestion = $('#search-suggestion');
 function reset() {
   suggestion.val('');
   $('#search').val('');
+  searchTracks = [];
   if (playlist.children().length < Object.keys(tracks).length) {
     playlist.empty();
     for (track in tracks) {
@@ -237,7 +238,6 @@ function reset() {
 
 function search(query) {
   if (!query || query.trim().length == 0) {
-    console.log('Resetting playlist');
     reset();
     return;
   }
@@ -279,8 +279,10 @@ var searchTimeout;
 $('#search').keydown(function(e) {
   if (e.which == 9) {
     // tab
-    e.preventDefault();
-    $(this).val(suggestion.val());
+    if (suggestion.val().trim().length > 0 && $(this).val() != suggestion.val()) {
+      e.preventDefault();
+      $(this).val(suggestion.val());
+    }
   }
 }).keyup(function(e) {
   if (e.which == 27 || e.which == 13) {
@@ -291,7 +293,7 @@ $('#search').keydown(function(e) {
   } else if (e.which == 8) {
     // backspace
     getSuggestion($(this).val());
-  } else {
+
     if ($(this).val() == '') {
       reset();
     }
@@ -303,7 +305,7 @@ $('#search').keydown(function(e) {
   var string = $(this).val() + character;
   getSuggestion(string);
 
-  searchTimeout = setTimeout(search, 1000, string);
+  searchTimeout = setTimeout(search, 500, string);
 }).focus(function() {
   $(this).css('background-color', 'transparent');
   suggestion.fadeTo(0, 1);

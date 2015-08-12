@@ -139,6 +139,12 @@ class SpotifyMP3(object):
 
         return playlist.tracks
 
+    def search(self, query, count=20):
+        result = self.session.search(query, track_count=count, search_type=spotify.SearchType.SUGGEST)
+        result.load()
+
+        return result.tracks
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

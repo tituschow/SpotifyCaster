@@ -112,3 +112,16 @@ class Track(object):
 
     def stop(self):
         self.state = Track.STOPPED
+
+    def as_payload(self, with_cover=False):
+        payload = {
+            'name': self.name,
+            'artist': ', '.join(artist.name for artist in self.artists),
+            'album': self.album.name,
+            'id': self.track.link.uri.split(':')[-1]
+        }
+
+        if with_cover:
+            payload['cover'] = self.get_cover(as_uri=True)
+
+        return payload

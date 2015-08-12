@@ -6,6 +6,7 @@ import os
 import threading
 import io
 import requests
+import json
 
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
@@ -54,15 +55,8 @@ def track_stream(id):
 @app.route('/track/<id>/metadata')
 def track_metadata(id):
     track = spotify.get_track('spotify:track:{}'.format(id))
-    #cover = track.get_cover(as_uri=True)
 
-    payload = {
-        'name': track.name,
-        'artist': ', '.join([artist.name for artist in track.artists]),
-        'album': track.album.name
-    }
-
-    return jsonify(payload)
+    return jsonify(track.as_payload())
 
 @app.route('/track/<id>/cover')
 def track_cover(id):
@@ -78,16 +72,29 @@ def playlist(user, id, shuffle=False):
     tracks = []
     for track in playlist:
         track_info = spotify.get_track(track.link.uri)
-        tracks.append({
-            'name': track_info.name,
-            'artist': ', '.join([artist.name for artist in track_info.artists]),
-            'album': track_info.album.name,
-            'cover': track_info.get_cover(as_uri=True),
-            'id': track.link.uri.split(':')[-1]
-        });
+        payload = track_info.as_payload(with_cover=True)
+        tracks.append(payload)
 
 
     return jsonify({'tracks': tracks, 'count': len(tracks)})
+
+@app.route('/search/<query>')
+@app.route('/search/<query>/<int:count>')
+def search(query, count=20):
+    results = spotify.search(query, count)
+
+    def get_tracks():
+        yield '{ "tracks": ['
+        for track in results:
+            track_info = spotify.get_track(track.link.uri)
+            payload = track_info.as_payload(with_cover=True)
+            if track == results[-1]:
+                yield json.dumps(payload)
+            else:
+                yield json.dumps(payload) + ', '
+        yield '], "count": ' + str(len(results)) + '}'
+
+    return Response(get_tracks(), mimetype='application/json')
 
 if __name__ == '__main__':
     import logging

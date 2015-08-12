@@ -2,7 +2,8 @@ var playlist = $('#playlist'),
     song_id = -1,
     tracks = {},
     queueTimer,
-    queue = [];
+    queue = [],
+    searchTracks = [];
 
 onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
@@ -61,6 +62,11 @@ function extractQueue() {
 }
 
 function play(id) {
+  if (!tracks[id]) {
+    registerTrack($.grep(searchTracks, function(track) {
+      return track.id == id;
+    })[0]);
+  }
   var track = tracks[id];
 
   if (currentMediaSession.items) {
@@ -159,8 +165,11 @@ function queueAll(trackList) {
   queueNext();
 }
 
-function addTrackElement(track) {
+function registerTrack(track) {
   tracks[track.id] = track;
+}
+
+function addTrackElement(track) {
   playlist.append($('<li>').append(
     $('<a>').attr('href', '#' + track.id).append(
       $('<img>').attr('src', track.cover)).append(
@@ -171,6 +180,7 @@ function addTrackElement(track) {
 
 $.getJSON('/playlist/iliekpie/5rZsjxKt6W8Sw9j7DXH9bH', function(data) {
   for (var i = 0; i < data.count; i++) {
+    registerTrack(data.tracks[i]);
     addTrackElement(data.tracks[i]);
   }
 });
@@ -183,6 +193,10 @@ playlist.on('click', 'a', function(e) {
   console.log('Playing: ' + id)
 
   play(id);
+
+  if (searchTracks.length > 0) {
+    reset();
+  }
 });
 
 $('#playpause').click(function(e) {
@@ -207,4 +221,107 @@ $('#next').click(function(e) {
 
 $('#volume').change(function(level) {
   setVolume($(this).val());
+});
+
+var suggestion = $('#search-suggestion');
+function reset() {
+  suggestion.val('');
+  $('#search').val('');
+  if (playlist.children().length < Object.keys(tracks).length) {
+    playlist.empty();
+    for (track in tracks) {
+      addTrackElement(tracks[track]);
+    }
+  }
+}
+
+function search(query) {
+  if (!query || query.trim().length == 0) {
+    console.log('Resetting playlist');
+    reset();
+    return;
+  }
+
+  console.log('new query: ' + query);
+
+  $.getJSON('/search/' + encodeURIComponent(query), function(data) {
+    playlist.empty();
+    searchTracks = [];
+    for (var i = 0; i < data.count; i++) {
+      searchTracks.push(data.tracks[i]);
+      addTrackElement(data.tracks[i]);
+    }
+  });
+}
+
+function getSuggestion(string) {
+  if (!string || string.length == 0) {
+    suggestion.val('');
+    return;
+  }
+
+  $.getJSON('/search/' + encodeURIComponent(string) + '/1', function(data) {
+    if (data.count == 1) {
+      var name = data.tracks[0].name;
+      var beginning = name.slice(0, string.length);
+      var chunk = name.slice(string.length);
+
+      if (beginning.localeCompare(string, 'en', { usage: 'search', sensitivity: 'base' }) == 0) {
+        suggestion.val(string + chunk);
+      } else {
+        suggestion.val('');
+      }
+    }
+  });
+}
+
+var searchTimeout;
+$('#search').keydown(function(e) {
+  if (e.which == 9) {
+    // tab
+    e.preventDefault();
+    $(this).val(suggestion.val());
+  }
+}).keyup(function(e) {
+  if (e.which == 27 || e.which == 13) {
+    // esc or enter
+    e.preventDefault();
+    this.blur();
+    search($(this).val());
+  } else if (e.which == 8) {
+    // backspace
+    getSuggestion($(this).val());
+  } else {
+    if ($(this).val() == '') {
+      reset();
+    }
+  }
+}).keypress(function(e) {
+  clearTimeout(searchTimeout);
+
+  var character = String.fromCharCode(e.charCode);
+  var string = $(this).val() + character;
+  getSuggestion(string);
+
+  searchTimeout = setTimeout(search, 1000, string);
+}).focus(function() {
+  $(this).css('background-color', 'transparent');
+  suggestion.fadeTo(0, 1);
+}).blur(function() {
+  $(this).css('background-color', 'white');
+  suggestion.fadeTo(0, 0).text('');
+});
+
+$(window).keydown(function(e){
+  if (e.metaKey || e.ctrlKey) {
+    // ctrl/cmd
+    if(e.which == 70 || e.which == 65){
+      // f or a
+      e.preventDefault();
+      $('#search').show().focus();
+      if (e.which == 65) {
+        $('#search').select();
+      }
+    }
+  }
 });

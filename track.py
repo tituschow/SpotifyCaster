@@ -84,12 +84,12 @@ class Track(object):
     def stream(self, start, end=None, count=0):
         TrackData = namedtuple('TrackData', 'data size')
 
-        if count > 3:
+        if count > 5:
             self.logger.info('Requested {}-{}, but total size is {}'.format(start, end, self._get_size()))
             self.logger.warning('Exceeded max wait: raising error')
             raise TrackTimeoutException('Exceeded max wait')
         if start >= self._get_size() or self.state == Track.UNLOADED:
-            time.sleep(3);
+            time.sleep(1);
             return self.stream(start, end, count + 1)
 
         length = self._get_chunk_size(start, end)

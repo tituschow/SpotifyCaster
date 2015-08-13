@@ -9,7 +9,7 @@ onMediaUpdate(function(isAlive) {
   if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
     if (currentMediaSession.currentItemId != song_id &&
         currentMediaSession.currentTime > 1 &&
-        currentMediaSession.currentTime < 4) {
+        currentMediaSession.currentTime < 5) {
       console.log('Detected oddly started song! Restarting. ' + currentMediaSession.currentTime);
       setMediaVolume(null, true);
       seek(function() { setMediaVolume(null, false) })(0, true);
@@ -219,7 +219,7 @@ $('#next').click(function(e) {
   currentMediaSession.queueNext();
 })
 
-$('#volume').change(function(level) {
+$('#volume').on('input change', function() {
   setVolume($(this).val());
 });
 

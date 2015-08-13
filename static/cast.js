@@ -245,11 +245,15 @@ function getMediaStatus() {
 }
 
 function setVolume(level) {
-  session.setReceiverVolumeLevel(level / 100);
+  if (session) {
+    session.setReceiverVolumeLevel(level / 100);
+  }
 }
 
 function setMuted(muted) {
-  session.setReceiverMuted(muted);
+  if (session) {
+    session.setReceiverMuted(muted);
+  }
 }
 
 function setMediaVolume(level, muted) {

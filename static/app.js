@@ -23,20 +23,50 @@ onMediaUpdate(function(isAlive) {
 
   console.log('Media ' + currentMediaSession.playerState + ' @ ' + currentMediaSession.currentTime);
   updateStatus();
-  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING) {
+  if (currentMediaSession.playerState == chrome.cast.media.PlayerState.PLAYING &&
+      currentMediaSession.currentItemId != song_id) {
     song_id = currentMediaSession.currentItemId;
+    updatePlayCount();
   }
 });
 
 onMediaDiscovery(function() {
   console.log('media discovered');
+  song_id = currentMediaSession.currentItemId;
   updateStatus();
+  updatePlayCount();
 });
+
+var playCount = {};
+function updatePlayCount() {
+  var item;
+  if (currentMediaSession.items) {
+    item = $.grep(currentMediaSession.items, function(element) {
+      return element.itemId == currentMediaSession.currentItemId;
+    })[0];
+  } else {
+    item = currentMediaSession;
+  }
+  var id = item.media.metadata.customData.id;
+
+  playCount[id] = playCount[id] + 1 || 1;
+}
 
 function dumpQueue() {
   console.log($.map(currentMediaSession.items, function(element) {
     return element.media.metadata.title;
   }));
+}
+
+function dumpTracks(tracks, name) {
+  trackNames = tracks.map(function(track) {
+    return track.name;
+  });
+  console.log(trackNames);
+
+  if (name) {
+    console.log(trackNames.indexOf(name));
+  }
 }
 
 function getItem(media, id) {
@@ -112,39 +142,40 @@ function updateStatus() {
   $('#volume').val(session.receiver.volume.level * 100);
 }
 
-function shuffleArray(array) {
-  var currentIndex = array.length, temporaryValue, randomIndex;
+function shuffleTracks(tracks) {
+  var length = tracks.length;
+  var shuffled = [];
 
-  // While there remain elements to shuffle...
-  while (0 !== currentIndex) {
+  var minWeight = Math.min.apply(null, $.map(playCount, function(count) { return count }));
 
-    // Pick a remaining element...
-    randomIndex = Math.floor(Math.random() * currentIndex);
-    currentIndex -= 1;
+  var shuffleTrack = function(track) {
+    // More plays = higher chance of being put in the back of the queue
+    var weight = Math.max(1, (playCount[track.id] || 1) / minWeight);
+    // Higher weight makes the index more likely to be a large number
+    // Fancy algorithm that basically reduces the effect weight has the larger it is.
+    var rand = Math.random();
+    var index = (tracks.length - parseInt(rand * (tracks.length / Math.pow(weight, (1/7) * rand)))) - 1;
 
-    // And swap it with the current element.
-    temporaryValue = array[currentIndex];
-    array[currentIndex] = array[randomIndex];
-    array[randomIndex] = temporaryValue;
+    if (shuffled[index]) {
+      // Keep trying to assign it an index until it finds a place
+      shuffleTrack(track);
+    } else {
+      shuffled[index] = track;
+    }
+  };
+
+  for (var i = 0; i < length; i++) {
+    var track = tracks[i];
+    shuffleTrack(track);
   }
 
-  return array;
+  return shuffled;
 }
 
-function shuffle(forced) {
-  if (currentMediaSession && currentMediaSession.items && !forced) {
-    var current_queue = $.map(currentMediaSession.items, function(element) {
-      return element.itemId
-    });
-    shuffleArray(current_queue);
-
-    var request = new chrome.cast.media.QueueReorderItemsRequest(current_queue);
-    currentMediaSession.queueReorderItems(request);
-  } else {
-    var current_queue = $.map(tracks, function(track) { return track });
-    shuffleArray(current_queue);
-    queueAll(current_queue);
-  }
+function shuffle() {
+  var current_queue = $.map(tracks, function(track) { return track });
+  var shuffled = shuffleTracks(current_queue);
+  queueAll(shuffled);
 }
 
 function queueAll(trackList) {
@@ -326,4 +357,10 @@ $(window).keydown(function(e){
       }
     }
   }
+}).load(function() {
+  playCount = JSON.parse(localStorage.getItem('playCount')) || {};
+  song_id = localStorage.getItem('currentSong') || -1;
+}).unload(function() {
+  localStorage.setItem('playCount', JSON.stringify(playCount));
+  localStorage.setItem('currentSong', song_id);
 });

@@ -16,7 +16,7 @@ var MAX_QUEUE_LENGTH = 160;
  */
 var currentMediaSession = null;
 var session = null;
-var MEDIA_ROOT = 'http://192.168.1.43:5000';
+var MEDIA_ROOT = 'http://192.168.1.8:5000';
 
 var timer = null;
 
